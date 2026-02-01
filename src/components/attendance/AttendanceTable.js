@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { generateAttendanceDates } from '../../utils/dateUtils';
+import { HALF_DAY_TIMES } from '../../utils/constants';
 import AttendanceRow from './AttendanceRow';
 import TransferDayPicker from './TransferDayPicker';
 
@@ -51,7 +52,7 @@ export default function AttendanceTable({
     const updates = { kubun: newKubun };
 
     // 「出勤」または「休日出勤」に変更した場合、デフォルト時間を自動入力
-    if ((newKubun === '出勤' || newKubun === '休日出勤' || newKubun === '午前休' || newKubun === '午後休') &&
+    if ((newKubun === '出勤' || newKubun === '休日出勤') &&
         !currentDayData.startTime && !currentDayData.endTime) {
       if (userSettings?.defaultStartTime) {
         updates.startTime = userSettings.defaultStartTime;
@@ -61,8 +62,17 @@ export default function AttendanceTable({
       }
     }
 
-    // 「定休日」「有給」「振休」に変更した場合、時間をクリア
-    if (['定休日', '有給', '振休'].includes(newKubun)) {
+    // 「午前休」「午後休」に変更した場合、固定の時間を設定
+    if (newKubun === '午前休') {
+      updates.startTime = HALF_DAY_TIMES.午前休.startTime;  // 13:00
+      updates.endTime = HALF_DAY_TIMES.午前休.endTime;      // 18:00
+    } else if (newKubun === '午後休') {
+      updates.startTime = HALF_DAY_TIMES.午後休.startTime;  // 08:45
+      updates.endTime = HALF_DAY_TIMES.午後休.endTime;      // 13:00
+    }
+
+    // 「定休日」「有給」「振休」「忌引」に変更した場合、時間をクリア
+    if (['定休日', '有給', '振休', '忌引'].includes(newKubun)) {
       updates.startTime = '';
       updates.endTime = '';
     }

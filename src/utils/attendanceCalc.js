@@ -12,6 +12,7 @@ export const calculateSummary = (userId, attendanceData) => {
   let paidLeaveDays = 0;
   let holidayWorkDays = 0;
   let transferDays = 0;
+  let bereavementDays = 0;  // 忌引
   let totalMinutes = 0;
 
   Object.values(userData).forEach(day => {
@@ -37,6 +38,10 @@ export const calculateSummary = (userId, attendanceData) => {
       case '振休':
         transferDays++;
         break;
+      case '忌引':
+        bereavementDays++;
+        // 忌引は出勤日数、定休日、有給のいずれにもカウントしない
+        break;
       default:
         break;
     }
@@ -61,6 +66,7 @@ export const calculateSummary = (userId, attendanceData) => {
     paidLeaveDays,
     holidayWorkDays,
     transferDays,
+    bereavementDays,
     totalMinutes,
     totalTime: `${hours}:${mins.toString().padStart(2, '0')}`
   };

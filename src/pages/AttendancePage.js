@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
-import { Loading, Button } from '../components/common';
+import { Loading, Button, Modal } from '../components/common';
 import {
   PeriodSelector,
   AttendanceSummary,
@@ -25,11 +25,14 @@ export default function AttendancePage() {
     setSelectedMonth,
     attendanceData,
     updateAttendance,
+    saveBatchAttendance,
     setTransferLink,
     removeTransferLink,
     loading,
     saving
   } = useAttendance();
+
+  const [showAutoFillConfirm, setShowAutoFillConfirm] = useState(false);
 
   const handleLogout = async () => {
     await logOut();
@@ -74,6 +77,54 @@ export default function AttendancePage() {
       { [userProfile.uid]: attendanceData[userProfile.uid] || {} },
       dates
     );
+  };
+
+  // 自動入力処理
+  const handleAutoFill = async () => {
+    if (!userProfile?.uid) return;
+
+    const dates = generateAttendanceDates(selectedYear, selectedMonth);
+    const fixedHolidays = userSettings.fixedHolidays || DEFAULT_SETTINGS.fixedHolidays;
+    const defaultStartTime = userSettings.defaultStartTime || DEFAULT_SETTINGS.defaultStartTime;
+    const defaultEndTime = userSettings.defaultEndTime || DEFAULT_SETTINGS.defaultEndTime;
+
+    const dataMap = {};
+
+    dates.forEach(({ date, dateKey }) => {
+      const dayOfWeek = date.getDay(); // 0=日曜, 6=土曜
+      const existingData = userAttendance[dateKey] || {};
+
+      // 既に振替連動がある場合はスキップ
+      if (existingData.furikaeDate) {
+        return;
+      }
+
+      if (fixedHolidays.includes(dayOfWeek)) {
+        // 定休日
+        dataMap[dateKey] = {
+          ...existingData,
+          kubun: '定休日',
+          startTime: '',
+          endTime: ''
+        };
+      } else {
+        // 出勤
+        dataMap[dateKey] = {
+          ...existingData,
+          kubun: '出勤',
+          startTime: defaultStartTime,
+          endTime: defaultEndTime
+        };
+      }
+    });
+
+    try {
+      await saveBatchAttendance(userProfile.uid, dataMap);
+    } catch (err) {
+      console.error('Auto-fill failed:', err);
+    }
+
+    setShowAutoFillConfirm(false);
   };
 
   const userAttendance = userProfile?.uid ? (attendanceData[userProfile.uid] || {}) : {};
@@ -138,10 +189,55 @@ export default function AttendancePage() {
                   保存中...
                 </span>
               )}
+              <Button onClick={() => setShowAutoFillConfirm(true)} variant="primary">
+                自動入力
+              </Button>
               <Button onClick={handleExport} variant="secondary">
                 Excelダウンロード
               </Button>
             </div>
+
+            {/* 自動入力確認モーダル */}
+            <Modal
+              isOpen={showAutoFillConfirm}
+              onClose={() => setShowAutoFillConfirm(false)}
+              title="自動入力の確認"
+            >
+              <div className="space-y-4">
+                <p className="text-slate-300">
+                  設定に基づいて勤怠を自動入力します。
+                </p>
+                <div className="bg-slate-700/50 rounded-xl p-4 space-y-2">
+                  <p className="text-slate-400 text-sm">
+                    <span className="text-white font-medium">定休日</span>（{(userSettings.fixedHolidays || DEFAULT_SETTINGS.fixedHolidays).map(d => ['日', '月', '火', '水', '木', '金', '土'][d]).join('・')}）
+                    → 「定休日」
+                  </p>
+                  <p className="text-slate-400 text-sm">
+                    <span className="text-white font-medium">その他の日</span>
+                    → 「出勤」（{userSettings.defaultStartTime || DEFAULT_SETTINGS.defaultStartTime}〜{userSettings.defaultEndTime || DEFAULT_SETTINGS.defaultEndTime}）
+                  </p>
+                </div>
+                <p className="text-amber-400 text-sm">
+                  ※ 振替連動がある日はスキップされます
+                </p>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    onClick={() => setShowAutoFillConfirm(false)}
+                    variant="secondary"
+                    className="flex-1"
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    onClick={handleAutoFill}
+                    variant="primary"
+                    className="flex-1"
+                  >
+                    実行
+                  </Button>
+                </div>
+              </div>
+            </Modal>
           </>
         )}
       </div>

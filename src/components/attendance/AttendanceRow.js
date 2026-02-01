@@ -27,7 +27,7 @@ export default function AttendanceRow({
   };
 
   // 区分によって入力可否を制御
-  const isTimeDisabled = !dayData.kubun || ['定休日', '有給', '振休'].includes(dayData.kubun);
+  const isTimeDisabled = !dayData.kubun || ['定休日', '有給', '振休', '忌引'].includes(dayData.kubun);
   const isFurikaeEnabled = ['休日出勤', '振休'].includes(dayData.kubun);
 
   return (
