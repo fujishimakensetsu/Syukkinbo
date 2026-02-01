@@ -37,13 +37,19 @@ export default function UserManagementPage() {
     navigate('/login');
   };
 
+  const [deleting, setDeleting] = useState(false);
+
   const handleDelete = async (userId) => {
+    setDeleting(true);
     try {
-      await deleteUserProfile(userId);
+      await deleteUserProfile(userId, true); // 勤怠データも削除
       setUsers(prev => prev.filter(u => u.uid !== userId));
       setDeleteConfirm(null);
     } catch (err) {
       console.error('Failed to delete user:', err);
+      alert('削除に失敗しました');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -110,7 +116,7 @@ export default function UserManagementPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        {user.uid !== userProfile?.uid && user.role !== 'admin' && (
+                        {user.uid !== userProfile?.uid && (
                           <Button
                             size="sm"
                             variant="danger"
@@ -139,7 +145,7 @@ export default function UserManagementPage() {
       {/* 削除確認モーダル */}
       <Modal
         isOpen={!!deleteConfirm}
-        onClose={() => setDeleteConfirm(null)}
+        onClose={() => !deleting && setDeleteConfirm(null)}
         title="ユーザー削除の確認"
         size="sm"
       >
@@ -150,12 +156,26 @@ export default function UserManagementPage() {
           <div className="bg-slate-700/50 rounded-xl p-4">
             <p className="text-white font-medium">{deleteConfirm?.name}</p>
             <p className="text-slate-400 text-sm">{deleteConfirm?.email}</p>
+            <p className="text-slate-500 text-xs mt-1">
+              権限: {getRoleName(deleteConfirm?.role)} / 所属: {deleteConfirm?.department || '-'}
+            </p>
+          </div>
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+            <p className="text-red-400 text-sm font-medium mb-2">
+              ⚠️ この操作は取り消せません
+            </p>
+            <ul className="text-red-400/80 text-xs space-y-1">
+              <li>・ユーザー情報が削除されます</li>
+              <li>・すべての勤怠データが削除されます</li>
+              <li>・有給休暇の記録が削除されます</li>
+            </ul>
           </div>
           <div className="flex gap-3">
             <Button
               variant="secondary"
               onClick={() => setDeleteConfirm(null)}
               className="flex-1"
+              disabled={deleting}
             >
               キャンセル
             </Button>
@@ -163,6 +183,7 @@ export default function UserManagementPage() {
               variant="danger"
               onClick={() => handleDelete(deleteConfirm?.uid)}
               className="flex-1"
+              loading={deleting}
             >
               削除する
             </Button>

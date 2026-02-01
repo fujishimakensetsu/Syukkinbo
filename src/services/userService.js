@@ -8,7 +8,8 @@ import {
   query,
   where,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { DEFAULT_SETTINGS } from '../utils/constants';
@@ -78,13 +79,30 @@ export const updateUserProfile = async (uid, updates) => {
 };
 
 /**
- * ユーザーを削除
+ * ユーザーを削除（関連データも含む）
  * @param {string} uid
+ * @param {boolean} deleteAttendance - 勤怠データも削除するか
  * @returns {Promise<void>}
  */
-export const deleteUserProfile = async (uid) => {
+export const deleteUserProfile = async (uid, deleteAttendance = true) => {
+  const batch = writeBatch(db);
+
+  // ユーザードキュメントを削除
   const userRef = doc(db, USERS_COLLECTION, uid);
-  await deleteDoc(userRef);
+  batch.delete(userRef);
+
+  // 勤怠データも削除する場合
+  if (deleteAttendance) {
+    const attendanceRef = collection(db, 'attendance');
+    const q = query(attendanceRef, where('userId', '==', uid));
+    const snapshot = await getDocs(q);
+
+    snapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+  }
+
+  await batch.commit();
 };
 
 /**
