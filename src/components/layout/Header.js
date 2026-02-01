@@ -16,21 +16,18 @@ export default function Header({ currentUser, onLogout }) {
 
   const navItems = [];
 
-  // 社員用ナビゲーション
-  if (currentUser?.role === 'employee') {
-    navItems.push({ path: '/attendance', label: '勤怠入力' });
-    navItems.push({ path: '/paid-leave', label: '有給管理' });
-    navItems.push({ path: '/settings', label: '設定' });
-  }
+  // 全ロール共通：自分の勤怠管理機能
+  navItems.push({ path: '/attendance', label: '勤怠入力' });
+  navItems.push({ path: '/paid-leave', label: '有給管理' });
+  navItems.push({ path: '/settings', label: '設定' });
 
-  // 経理用ナビゲーション
-  if (currentUser?.role === 'keiri') {
-    navItems.push({ path: '/admin', label: '勤怠確認' });
-  }
-
-  // 管理者用ナビゲーション
-  if (currentUser?.role === 'admin') {
+  // 経理用ナビゲーション（追加機能）
+  if (currentUser?.role === 'keiri' || currentUser?.role === 'admin') {
     navItems.push({ path: '/admin', label: '全社員一覧' });
+  }
+
+  // 管理者用ナビゲーション（追加機能）
+  if (currentUser?.role === 'admin') {
     navItems.push({ path: '/users', label: 'ユーザー管理' });
   }
 

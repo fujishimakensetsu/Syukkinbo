@@ -34,11 +34,8 @@ function PrivateRoute({ children, allowedRoles, requireEmailVerification = true 
 
   // 権限チェック
   if (allowedRoles && !allowedRoles.includes(userProfile?.role)) {
-    // 権限がない場合は適切なページにリダイレクト
-    if (userProfile?.role === 'employee') {
-      return <Navigate to="/attendance" replace />;
-    }
-    return <Navigate to="/admin" replace />;
+    // 権限がない場合は勤怠入力ページにリダイレクト
+    return <Navigate to="/attendance" replace />;
   }
 
   return children;
@@ -121,11 +118,11 @@ function AppRoutes() {
         }
       />
 
-      {/* 社員用ルート */}
+      {/* 全ロール共通ルート（自分の勤怠管理） */}
       <Route
         path="/attendance"
         element={
-          <PrivateRoute allowedRoles={['employee']}>
+          <PrivateRoute allowedRoles={['employee', 'keiri', 'admin']}>
             <AttendancePage />
           </PrivateRoute>
         }
@@ -133,7 +130,7 @@ function AppRoutes() {
       <Route
         path="/settings"
         element={
-          <PrivateRoute allowedRoles={['employee']}>
+          <PrivateRoute allowedRoles={['employee', 'keiri', 'admin']}>
             <SettingsPage />
           </PrivateRoute>
         }
@@ -141,7 +138,7 @@ function AppRoutes() {
       <Route
         path="/paid-leave"
         element={
-          <PrivateRoute allowedRoles={['employee']}>
+          <PrivateRoute allowedRoles={['employee', 'keiri', 'admin']}>
             <PaidLeavePage />
           </PrivateRoute>
         }
