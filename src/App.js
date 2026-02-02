@@ -15,7 +15,8 @@ import {
   PaidLeavePage,
   HistoryPage,
   MonthlySnapshotPage,
-  YearlyStatisticsPage
+  YearlyStatisticsPage,
+  StaffDetailPage
 } from './pages';
 
 // 認証が必要なルートのラッパー
@@ -147,14 +148,6 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/history"
-        element={
-          <PrivateRoute allowedRoles={['employee', 'keiri', 'admin']}>
-            <HistoryPage />
-          </PrivateRoute>
-        }
-      />
-      <Route
         path="/monthly-snapshot"
         element={
           <PrivateRoute allowedRoles={['employee', 'keiri', 'admin']}>
@@ -162,10 +155,20 @@ function AppRoutes() {
           </PrivateRoute>
         }
       />
+
+      {/* 経理・管理者用ルート */}
+      <Route
+        path="/history"
+        element={
+          <PrivateRoute allowedRoles={['keiri', 'admin']}>
+            <HistoryPage />
+          </PrivateRoute>
+        }
+      />
       <Route
         path="/yearly-statistics"
         element={
-          <PrivateRoute allowedRoles={['employee', 'keiri', 'admin']}>
+          <PrivateRoute allowedRoles={['keiri', 'admin']}>
             <YearlyStatisticsPage />
           </PrivateRoute>
         }
@@ -177,6 +180,14 @@ function AppRoutes() {
         element={
           <PrivateRoute allowedRoles={['admin', 'keiri']}>
             <AdminPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/staff/:userId"
+        element={
+          <PrivateRoute allowedRoles={['admin', 'keiri']}>
+            <StaffDetailPage />
           </PrivateRoute>
         }
       />

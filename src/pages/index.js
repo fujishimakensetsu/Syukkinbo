@@ -10,3 +10,4 @@ export { default as PaidLeavePage } from './PaidLeavePage';
 export { default as HistoryPage } from './HistoryPage';
 export { default as MonthlySnapshotPage } from './MonthlySnapshotPage';
 export { default as YearlyStatisticsPage } from './YearlyStatisticsPage';
+export { default as StaffDetailPage } from './StaffDetailPage';

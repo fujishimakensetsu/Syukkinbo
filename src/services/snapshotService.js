@@ -44,7 +44,8 @@ const calculatePeriod = (year, month) => {
 };
 
 /**
- * 月次スナップショットを保存（確定）
+ * 月次スナップショットを保存（確定・更新）
+ * 既に確定済みでも更新可能。更新履歴は保持される。
  * @param {string} userId
  * @param {number} year
  * @param {number} month
@@ -55,11 +56,9 @@ export const saveMonthlySnapshot = async (userId, year, month, confirmedBy) => {
   const snapshotId = generateSnapshotId(userId, year, month);
   const docRef = doc(db, SNAPSHOT_COLLECTION, snapshotId);
 
-  // 既存のスナップショットがあるかチェック
-  const existingSnapshot = await getDoc(docRef);
-  if (existingSnapshot.exists() && existingSnapshot.data().status === 'confirmed') {
-    throw new Error('この月は既に確定済みです。確定後は変更できません。');
-  }
+  // 既存のスナップショットを取得
+  const existingSnapshotDoc = await getDoc(docRef);
+  const existingData = existingSnapshotDoc.exists() ? existingSnapshotDoc.data() : null;
 
   // 現在の出勤データを取得
   const attendanceData = await getAttendanceByPeriod(userId, year, month);
@@ -68,6 +67,17 @@ export const saveMonthlySnapshot = async (userId, year, month, confirmedBy) => {
   const summary = calculateSummary(userId, { [userId]: attendanceData });
 
   const { periodStart, periodEnd } = calculatePeriod(year, month);
+
+  // 更新履歴を構築
+  const updateHistory = existingData?.updateHistory || [];
+  if (existingData) {
+    // 既存のスナップショットがある場合、履歴に追加
+    updateHistory.push({
+      updatedAt: existingData.confirmedAt,
+      updatedBy: existingData.confirmedBy,
+      previousSummary: existingData.summary
+    });
+  }
 
   const snapshotDoc = {
     userId,
@@ -79,7 +89,9 @@ export const saveMonthlySnapshot = async (userId, year, month, confirmedBy) => {
     summary,
     status: 'confirmed',
     confirmedAt: serverTimestamp(),
-    confirmedBy
+    confirmedBy,
+    updateHistory,
+    version: (existingData?.version || 0) + 1
   };
 
   await setDoc(docRef, snapshotDoc);

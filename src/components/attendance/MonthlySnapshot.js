@@ -95,10 +95,11 @@ export default function MonthlySnapshot({ userId, year, month }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p className="text-green-400 font-medium">確定済み</p>
+                  <p className="text-green-400 font-medium">提出済み</p>
                   {snapshot?.confirmedAt && (
                     <p className="text-sm text-green-300/70">
-                      {snapshot.confirmedAt.toLocaleString('ja-JP')} に確定
+                      {snapshot.confirmedAt.toLocaleString('ja-JP')} に提出
+                      {snapshot?.version > 1 && ` (Ver.${snapshot.version})`}
                     </p>
                   )}
                 </div>
@@ -109,24 +110,22 @@ export default function MonthlySnapshot({ userId, year, month }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p className="text-yellow-400 font-medium">未確定</p>
+                  <p className="text-yellow-400 font-medium">未提出</p>
                   <p className="text-sm text-yellow-300/70">
-                    内容を確認し、確定ボタンを押してください
+                    内容を確認し、提出ボタンを押してください
                   </p>
                 </div>
               </>
             )}
           </div>
 
-          {!isConfirmed && (
-            <Button
-              onClick={() => setShowConfirmModal(true)}
-              variant="primary"
-              disabled={saving}
-            >
-              この月を確定
-            </Button>
-          )}
+          <Button
+            onClick={() => setShowConfirmModal(true)}
+            variant={isConfirmed ? 'secondary' : 'primary'}
+            disabled={saving}
+          >
+            {isConfirmed ? '再提出' : 'この月を提出'}
+          </Button>
         </div>
       </div>
 
@@ -166,27 +165,29 @@ export default function MonthlySnapshot({ userId, year, month }) {
         </div>
       )}
 
-      {/* 確定確認モーダル */}
+      {/* 提出確認モーダル */}
       <Modal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
-        title="月次出勤簿の確定"
+        title={isConfirmed ? '月次出勤簿の再提出' : '月次出勤簿の提出'}
       >
         <div className="space-y-4">
           <p className="text-slate-300">
-            {year}年{month}月（{month}月16日〜{month === 12 ? year + 1 : year}年{month === 12 ? 1 : month + 1}月15日）の出勤簿を確定しますか？
+            {year}年{month}月（{month}月16日〜{month === 12 ? year + 1 : year}年{month === 12 ? 1 : month + 1}月15日）の出勤簿を{isConfirmed ? '再提出' : '提出'}しますか？
           </p>
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div className="text-sm text-amber-300">
-                <p className="font-medium mb-1">注意</p>
-                <p>確定後は内容を変更できません。確定前に内容をよく確認してください。</p>
+          {isConfirmed && (
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-sm text-blue-300">
+                  <p>再提出すると、現在の勤怠データで上書きされます。</p>
+                  <p>以前の提出内容は履歴として保存されます。</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <div className="flex gap-3 pt-2">
             <Button
               onClick={() => setShowConfirmModal(false)}
@@ -202,7 +203,7 @@ export default function MonthlySnapshot({ userId, year, month }) {
               className="flex-1"
               disabled={saving}
             >
-              {saving ? '確定中...' : '確定する'}
+              {saving ? '提出中...' : (isConfirmed ? '再提出する' : '提出する')}
             </Button>
           </div>
         </div>

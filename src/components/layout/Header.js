@@ -15,21 +15,22 @@ export default function Header({ currentUser, onLogout }) {
   };
 
   const navItems = [];
+  const isAdminOrKeiri = currentUser?.role === 'keiri' || currentUser?.role === 'admin';
 
   // 全ロール共通：自分の勤怠管理機能
   navItems.push({ path: '/attendance', label: '勤怠入力' });
   navItems.push({ path: '/monthly-snapshot', label: '月次出勤簿' });
-  navItems.push({ path: '/yearly-statistics', label: '年間統計' });
-  navItems.push({ path: '/history', label: '履歴' });
   navItems.push({ path: '/paid-leave', label: '有給管理' });
   navItems.push({ path: '/settings', label: '設定' });
 
-  // 経理用ナビゲーション（追加機能）
-  if (currentUser?.role === 'keiri' || currentUser?.role === 'admin') {
+  // 経理・管理者用ナビゲーション
+  if (isAdminOrKeiri) {
     navItems.push({ path: '/admin', label: '全社員一覧' });
+    navItems.push({ path: '/yearly-statistics', label: '年間統計' });
+    navItems.push({ path: '/history', label: '履歴' });
   }
 
-  // 管理者用ナビゲーション（追加機能）
+  // 管理者のみ（ユーザー削除など）
   if (currentUser?.role === 'admin') {
     navItems.push({ path: '/users', label: 'ユーザー管理' });
   }
