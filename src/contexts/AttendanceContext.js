@@ -92,21 +92,21 @@ export function AttendanceProvider({ children }) {
       }
     }));
 
-    // Firestoreに保存
+    // Firestoreに保存（変更者のUIDを渡す）
     setSaving(true);
     try {
       const currentData = attendanceData[userId]?.[dateKey] || {};
       await saveAttendance(userId, dateKey, {
         ...currentData,
         [field]: value
-      });
+      }, userProfile?.uid);
     } catch (err) {
       console.error('Failed to save attendance:', err);
       setError('保存に失敗しました');
     } finally {
       setSaving(false);
     }
-  }, [attendanceData]);
+  }, [attendanceData, userProfile?.uid]);
 
   // 日付の勤怠データを一括更新
   const setDayAttendance = useCallback(async (userId, dateKey, dayData) => {
@@ -119,17 +119,17 @@ export function AttendanceProvider({ children }) {
       }
     }));
 
-    // Firestoreに保存
+    // Firestoreに保存（変更者のUIDを渡す）
     setSaving(true);
     try {
-      await saveAttendance(userId, dateKey, dayData);
+      await saveAttendance(userId, dateKey, dayData, userProfile?.uid);
     } catch (err) {
       console.error('Failed to save attendance:', err);
       setError('保存に失敗しました');
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [userProfile?.uid]);
 
   // 複数日の勤怠データを一括保存
   const saveBatchAttendance = useCallback(async (userId, dataMap) => {

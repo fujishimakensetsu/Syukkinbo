@@ -60,3 +60,19 @@ export const HALF_DAY_TIMES = {
   午前休: { startTime: '13:00', endTime: '18:00' },  // 午前休：13:00出勤、18:00退勤
   午後休: { startTime: '08:45', endTime: '13:00' }   // 午後休：8:45出勤、13:00退勤
 };
+
+// 標準勤務時間（残業計算用）
+export const STANDARD_WORK = {
+  startTime: '08:45',
+  endTime: '18:00',
+  breakMinutes: 60,           // 休憩時間（分）
+  standardMinutes: 495        // 標準勤務時間（8時間15分 = 495分）
+};
+
+// 年度期間（4月16日～翌年4月15日）
+export const FISCAL_YEAR = {
+  startMonth: 4,
+  startDay: 16,
+  endMonth: 4,
+  endDay: 15
+};

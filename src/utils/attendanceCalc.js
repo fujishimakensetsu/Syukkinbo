@@ -134,3 +134,139 @@ export const calculateWorkMinutes = (startTime, endTime) => {
   const workMinutes = endMinutes - startMinutes - 60; // 休憩1時間
   return workMinutes > 0 ? workMinutes : 0;
 };
+
+/**
+ * 残業時間を計算
+ * @param {string} startTime
+ * @param {string} endTime
+ * @param {string} kubun 勤務区分
+ * @returns {number} 残業分数（マイナスの場合は0）
+ */
+export const calculateOvertimeMinutes = (startTime, endTime, kubun) => {
+  // 出勤または休日出勤の場合のみ残業計算
+  if (!['出勤', '休日出勤'].includes(kubun)) {
+    return 0;
+  }
+
+  const workMinutes = calculateWorkMinutes(startTime, endTime);
+  const standardMinutes = 495; // 8時間15分
+  const overtime = workMinutes - standardMinutes;
+  return overtime > 0 ? overtime : 0;
+};
+
+/**
+ * 年度の開始日と終了日を取得
+ * @param {number} fiscalYear 年度（例: 2025 = 2025年度）
+ * @returns {{ startDate: string, endDate: string }}
+ */
+export const getFiscalYearRange = (fiscalYear) => {
+  const startDate = `${fiscalYear}-04-16`;
+  const endDate = `${fiscalYear + 1}-04-15`;
+  return { startDate, endDate };
+};
+
+/**
+ * 日付から年度を取得
+ * @param {string|Date} date
+ * @returns {number}
+ */
+export const getFiscalYear = (date) => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+
+  // 4月16日以降は当年度、4月15日以前は前年度
+  if (month > 4 || (month === 4 && day >= 16)) {
+    return year;
+  }
+  return year - 1;
+};
+
+/**
+ * 年間統計を計算
+ * @param {Object} attendanceData 年間の出勤データ
+ * @returns {Object}
+ */
+export const calculateYearlyStatistics = (attendanceData) => {
+  let workDays = 0;
+  let holidayWorkDays = 0;
+  let transferDays = 0;
+  let paidLeaveDays = 0;
+  let amRestDays = 0;
+  let pmRestDays = 0;
+  let totalMinutes = 0;
+  let overtimeMinutes = 0;
+  let monthCount = 0;
+  const monthlyOvertime = {};
+
+  Object.entries(attendanceData).forEach(([dateKey, day]) => {
+    if (!day || !day.kubun) return;
+
+    // 月ごとの残業時間を追跡
+    const month = dateKey.substring(0, 7); // YYYY-MM
+    if (!monthlyOvertime[month]) {
+      monthlyOvertime[month] = 0;
+    }
+
+    switch (day.kubun) {
+      case '出勤':
+        workDays++;
+        break;
+      case '休日出勤':
+        workDays++;
+        holidayWorkDays++;
+        break;
+      case '振休':
+        transferDays++;
+        break;
+      case '有給':
+        paidLeaveDays++;
+        break;
+      case '午前休':
+        amRestDays++;
+        paidLeaveDays += 0.5;
+        workDays += 0.5;
+        break;
+      case '午後休':
+        pmRestDays++;
+        paidLeaveDays += 0.5;
+        workDays += 0.5;
+        break;
+      default:
+        break;
+    }
+
+    // 就業時間と残業時間の計算
+    if (day.startTime && day.endTime) {
+      const workMins = calculateWorkMinutes(day.startTime, day.endTime);
+      totalMinutes += workMins;
+
+      const overtimeMins = calculateOvertimeMinutes(day.startTime, day.endTime, day.kubun);
+      overtimeMinutes += overtimeMins;
+      monthlyOvertime[month] += overtimeMins;
+    }
+  });
+
+  // 月数をカウント
+  monthCount = Object.keys(monthlyOvertime).length;
+
+  // 月あたり平均残業時間
+  const avgMonthlyOvertime = monthCount > 0 ? Math.round(overtimeMinutes / monthCount) : 0;
+
+  return {
+    workDays,
+    holidayWorkDays,
+    transferDays,
+    paidLeaveDays,
+    amRestDays,
+    pmRestDays,
+    totalMinutes,
+    totalTime: minutesToTime(totalMinutes),
+    overtimeMinutes,
+    overtimeTime: minutesToTime(overtimeMinutes),
+    avgMonthlyOvertimeMinutes: avgMonthlyOvertime,
+    avgMonthlyOvertimeTime: minutesToTime(avgMonthlyOvertime),
+    monthCount
+  };
+};

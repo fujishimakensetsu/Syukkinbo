@@ -10,11 +10,15 @@ import {
   getDocs,
   orderBy,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  runTransaction,
+  addDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { compareChanges } from './historyService';
 
 const ATTENDANCE_COLLECTION = 'attendance';
+const HISTORY_COLLECTION = 'attendance_history';
 
 /**
  * 勤怠データのドキュメントIDを生成
@@ -27,13 +31,14 @@ const generateDocId = (userId, dateKey) => {
 };
 
 /**
- * 勤怠データを保存（作成または更新）
+ * 勤怠データを保存（作成または更新）+ 履歴を同時保存
  * @param {string} userId
  * @param {string} dateKey YYYY-MM-DD形式
  * @param {Object} data
+ * @param {string} changedBy 変更者のユーザーID
  * @returns {Promise<void>}
  */
-export const saveAttendance = async (userId, dateKey, data) => {
+export const saveAttendance = async (userId, dateKey, data, changedBy = null) => {
   const docId = generateDocId(userId, dateKey);
   const docRef = doc(db, ATTENDANCE_COLLECTION, docId);
 
@@ -53,14 +58,53 @@ export const saveAttendance = async (userId, dateKey, data) => {
     updatedAt: serverTimestamp()
   };
 
-  // ドキュメントが存在するかチェック
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
-    await updateDoc(docRef, attendanceDoc);
-  } else {
-    attendanceDoc.createdAt = serverTimestamp();
-    await setDoc(docRef, attendanceDoc);
-  }
+  // トランザクションで勤怠データと履歴を同時保存
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(docRef);
+    const isNew = !docSnap.exists();
+    const oldData = isNew ? null : docSnap.data();
+
+    // 勤怠データを保存
+    if (isNew) {
+      attendanceDoc.createdAt = serverTimestamp();
+      transaction.set(docRef, attendanceDoc);
+    } else {
+      transaction.update(docRef, attendanceDoc);
+    }
+
+    // 履歴データを作成
+    const historyRef = doc(collection(db, HISTORY_COLLECTION));
+    let historyDoc;
+
+    if (isNew) {
+      historyDoc = {
+        userId,
+        date: dateKey,
+        attendanceDocId: docId,
+        action: 'create',
+        snapshot: attendanceDoc,
+        changedFields: [],
+        previousValues: {},
+        changedAt: serverTimestamp(),
+        changedBy: changedBy || userId
+      };
+    } else {
+      const { changedFields, previousValues } = compareChanges(oldData, attendanceDoc);
+      historyDoc = {
+        userId,
+        date: dateKey,
+        attendanceDocId: docId,
+        action: 'update',
+        snapshot: attendanceDoc,
+        changedFields,
+        previousValues,
+        changedAt: serverTimestamp(),
+        changedBy: changedBy || userId
+      };
+    }
+
+    transaction.set(historyRef, historyDoc);
+  });
 
   return docId;
 };
@@ -169,15 +213,42 @@ export const getAttendanceByDateRange = async (userId, startDate, endDate) => {
 };
 
 /**
- * 勤怠データを削除
+ * 勤怠データを削除 + 履歴を同時保存
  * @param {string} userId
  * @param {string} dateKey
+ * @param {string} changedBy 変更者のユーザーID
  * @returns {Promise<void>}
  */
-export const deleteAttendance = async (userId, dateKey) => {
+export const deleteAttendance = async (userId, dateKey, changedBy = null) => {
   const docId = generateDocId(userId, dateKey);
   const docRef = doc(db, ATTENDANCE_COLLECTION, docId);
-  await deleteDoc(docRef);
+
+  // トランザクションで削除と履歴保存を同時実行
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(docRef);
+    if (!docSnap.exists()) return;
+
+    const oldData = docSnap.data();
+
+    // 勤怠データを削除
+    transaction.delete(docRef);
+
+    // 履歴データを作成
+    const historyRef = doc(collection(db, HISTORY_COLLECTION));
+    const historyDoc = {
+      userId,
+      date: dateKey,
+      attendanceDocId: docId,
+      action: 'delete',
+      snapshot: oldData,
+      changedFields: [],
+      previousValues: {},
+      changedAt: serverTimestamp(),
+      changedBy: changedBy || userId
+    };
+
+    transaction.set(historyRef, historyDoc);
+  });
 };
 
 /**

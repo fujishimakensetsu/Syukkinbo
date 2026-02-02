@@ -18,6 +18,9 @@ export default function Header({ currentUser, onLogout }) {
 
   // 全ロール共通：自分の勤怠管理機能
   navItems.push({ path: '/attendance', label: '勤怠入力' });
+  navItems.push({ path: '/monthly-snapshot', label: '月次出勤簿' });
+  navItems.push({ path: '/yearly-statistics', label: '年間統計' });
+  navItems.push({ path: '/history', label: '履歴' });
   navItems.push({ path: '/paid-leave', label: '有給管理' });
   navItems.push({ path: '/settings', label: '設定' });
 

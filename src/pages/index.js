@@ -7,3 +7,6 @@ export { default as AdminPage } from './AdminPage';
 export { default as UserManagementPage } from './UserManagementPage';
 export { default as SettingsPage } from './SettingsPage';
 export { default as PaidLeavePage } from './PaidLeavePage';
+export { default as HistoryPage } from './HistoryPage';
+export { default as MonthlySnapshotPage } from './MonthlySnapshotPage';
+export { default as YearlyStatisticsPage } from './YearlyStatisticsPage';
